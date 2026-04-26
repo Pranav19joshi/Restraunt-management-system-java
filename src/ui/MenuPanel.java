@@ -14,8 +14,7 @@ public class MenuPanel extends JPanel {
     private DefaultTableModel tableModel;
     private JTable menuTable;
     private JComboBox<String> typeCombo;
-    private JTextField idField, nameField, priceField, categoryField, prepField, volumeField;
-    private JCheckBox vegOrAlcCheck;
+    private JTextField idField, nameField, priceField, categoryField;
 
     private static final Color BG = new Color(25, 25, 35), CARD = new Color(32, 32, 48);
     private static final Color ACCENT = new Color(255, 200, 60), FG = new Color(210, 210, 225);
@@ -33,7 +32,7 @@ public class MenuPanel extends JPanel {
         add(title, BorderLayout.NORTH);
 
         // Table
-        String[] cols = {"ID", "Name", "Base Price", "Category", "Type", "Taxed Price", "Available"};
+        String[] cols = {"ID", "Name", "Base Price", "Category", "Type", "Taxed Price"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -54,7 +53,7 @@ public class MenuPanel extends JPanel {
     }
 
     private JPanel buildForm() {
-        JPanel form = new JPanel(new GridLayout(4, 4, 8, 5));
+        JPanel form = new JPanel(new GridLayout(3, 4, 8, 5));
         form.setBackground(CARD);
         form.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(BorderFactory.createLineBorder(ACCENT),
@@ -63,17 +62,13 @@ public class MenuPanel extends JPanel {
 
         typeCombo     = combo(new String[]{"Food", "Drink"});
         idField       = field(); nameField = field(); priceField = field();
-        categoryField = field(); prepField = field(); volumeField = field();
-        vegOrAlcCheck = new JCheckBox(); vegOrAlcCheck.setBackground(CARD);
+        categoryField = field();
 
         form.add(lbl("Type:"));     form.add(typeCombo);
         form.add(lbl("Item ID:"));  form.add(idField);
         form.add(lbl("Name:"));     form.add(nameField);
         form.add(lbl("Price:"));    form.add(priceField);
         form.add(lbl("Category:")); form.add(categoryField);
-        form.add(lbl("Veg/Alc:")); form.add(vegOrAlcCheck);
-        form.add(lbl("Prep(min):")); form.add(prepField);
-        form.add(lbl("Volume:"));   form.add(volumeField);
         return form;
     }
 
@@ -82,13 +77,11 @@ public class MenuPanel extends JPanel {
         p.setBackground(BG);
         JButton addBtn = btn("Add Item", new Color(55, 170, 95));
         JButton rmBtn  = btn("Remove Selected", new Color(190, 65, 65));
-        JButton togBtn = btn("Toggle Available", new Color(70, 120, 190));
         JButton refBtn = btn("Refresh", new Color(90, 90, 150));
         addBtn.addActionListener(e -> addItem());
         rmBtn.addActionListener(e  -> removeSelected());
-        togBtn.addActionListener(e -> toggleAvailability());
         refBtn.addActionListener(e -> refreshTable());
-        p.add(addBtn); p.add(rmBtn); p.add(togBtn); p.add(refBtn);
+        p.add(addBtn); p.add(rmBtn); p.add(refBtn);
         return p;
     }
 
@@ -103,16 +96,14 @@ public class MenuPanel extends JPanel {
             double price = Double.parseDouble(priceStr);
             MenuItem item;
             if ("Food".equals(type)) {
-                int prep = prepField.getText().trim().isEmpty() ? 10 : Integer.parseInt(prepField.getText().trim());
-                item = new FoodItem(id, name, category, price, true, vegOrAlcCheck.isSelected(), prep);
+                item = new FoodItem(id, name, category, price);
             } else {
-                String vol = volumeField.getText().trim().isEmpty() ? "300ml" : volumeField.getText().trim();
-                item = new DrinkItem(id, name, category, price, true, vegOrAlcCheck.isSelected(), vol);
+                item = new DrinkItem(id, name, category, price);
             }
             menuRepository.add(item); refreshTable(); clearForm();
             msg("Item added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException ex) {
-            msg("Invalid price or prep time.", "Error", JOptionPane.ERROR_MESSAGE);
+            msg("Invalid price.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -125,27 +116,18 @@ public class MenuPanel extends JPanel {
         }
     }
 
-    private void toggleAvailability() {
-        int row = menuTable.getSelectedRow();
-        if (row < 0) { msg("Select an item.", "No Selection", JOptionPane.WARNING_MESSAGE); return; }
-        MenuItem item = menuRepository.findById((String) tableModel.getValueAt(row, 0));
-        if (item != null) { item.setAvailable(!item.isAvailable()); menuRepository.saveToFile(); refreshTable(); }
-    }
-
     public void refreshTable() {
         tableModel.setRowCount(0);
         for (MenuItem item : menuRepository.getAll()) {
             tableModel.addRow(new Object[]{item.getItemId(), item.getName(),
                     String.format("%.2f", item.getBasePrice()), item.getCategory(),
-                    item.getItemType(), String.format("%.2f", item.getTaxedPrice()),
-                    item.isAvailable() ? "Yes" : "No"});
+                    item.getItemType(), String.format("%.2f", item.getTaxedPrice())});
         }
     }
 
     private void clearForm() {
         idField.setText(""); nameField.setText(""); priceField.setText("");
-        categoryField.setText(""); prepField.setText(""); volumeField.setText("");
-        vegOrAlcCheck.setSelected(false);
+        categoryField.setText("");
     }
 
     // Style helpers

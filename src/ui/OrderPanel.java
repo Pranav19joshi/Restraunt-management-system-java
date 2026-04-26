@@ -231,7 +231,7 @@ public class OrderPanel extends JPanel {
     }
 
     private MenuItem findMenuItem(String itemId) {
-        for (MenuItem item : menuRepository.getAvailableItems())
+        for (MenuItem item : menuRepository.getAll())
             if (item.getItemId().equals(itemId)) return item;
         return null;
     }
@@ -281,7 +281,7 @@ public class OrderPanel extends JPanel {
 
     public void refreshMenuSelection() {
         menuSelectModel.setRowCount(0);
-        for (MenuItem item : menuRepository.getAvailableItems())
+        for (MenuItem item : menuRepository.getAll())
             menuSelectModel.addRow(new Object[]{item.getItemId(), item.getName(),
                     item.getItemType(), String.format("%.2f", item.getTaxedPrice())});
     }
