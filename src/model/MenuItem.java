@@ -1,7 +1,6 @@
 package model;
 
 public abstract class MenuItem {
-    public static final double TAX_RATE = 0.10;
     private String itemId;
     private String name;
     private String category;
@@ -14,10 +13,10 @@ public abstract class MenuItem {
         this.basePrice = basePrice;
     }
 
+    public static final double TAX_RATE = 0.10;
     public double getTaxedPrice() {
-        return Math.round(basePrice * (1 + TAX_RATE) * 100.0) / 100.0;
+        return getBasePrice() * (1 + TAX_RATE);
     }
-
     public abstract String getItemType();
 
     public String getItemId() { return itemId; }
@@ -31,6 +30,8 @@ public abstract class MenuItem {
 
     public double getBasePrice() { return basePrice; }
     public void setBasePrice(double basePrice) { this.basePrice = basePrice; }
+
+
 
     @Override
     public String toString() {

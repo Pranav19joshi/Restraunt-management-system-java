@@ -33,8 +33,8 @@ public class NotificationThread implements Runnable, Notifiable {
     }
 
     @Override
-    public synchronized void onOrderReady(String orderId, int tableNumber) {
-        String message = "Order " + orderId + " is READY for Table " + tableNumber + "!";
+    public synchronized void onOrderReady(String orderId) {
+        String message = "Order " + orderId + " is READY!";
         eventQueue.offer(new NotificationEvent(message, true));
     }
 

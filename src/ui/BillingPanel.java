@@ -129,7 +129,7 @@ public class BillingPanel extends JPanel {
         List<Order> orders = orderService.getAllOrders();
         orders.sort((a, b) -> b.getOrderId().compareTo(a.getOrderId()));
         for (Order o : orders)
-            orderCombo.addItem(o.getOrderId() + " | T" + o.getTableNumber() + " | " + o.getCustomerName() + " [" + o.getStatus() + "]");
+            orderCombo.addItem(o.getOrderId() + " | " + o.getCustomerName() + " [" + o.getStatus() + "]");
     }
 
     private String getSelectedOrderId() {
@@ -177,7 +177,6 @@ public class BillingPanel extends JPanel {
         } catch (PaymentException ex) { err(ex.getMessage()); }
     }
 
-    // Helpers
     private void err(String m) { JOptionPane.showMessageDialog(this, m, "Error", JOptionPane.ERROR_MESSAGE); }
     private JLabel lbl(String t) { JLabel l = new JLabel(t); l.setForeground(FG); l.setFont(new Font("SansSerif", Font.PLAIN, 12)); l.setAlignmentX(LEFT_ALIGNMENT); return l; }
     private JTextField field(String def) { JTextField f = new JTextField(def); f.setBackground(new Color(45,45,60)); f.setForeground(Color.WHITE); f.setCaretColor(Color.WHITE); f.setAlignmentX(LEFT_ALIGNMENT); f.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(70,70,100)), BorderFactory.createEmptyBorder(2,5,2,5))); return f; }

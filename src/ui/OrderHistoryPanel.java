@@ -74,7 +74,7 @@ public class OrderHistoryPanel extends JPanel {
     }
 
     private JScrollPane buildTable() {
-        String[] cols = {"Order ID", "Table", "Customer", "Status", "Total (Rs.)", "Time"};
+        String[] cols = {"Order ID", "Customer", "Status", "Total (Rs.)", "Time"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -117,7 +117,7 @@ public class OrderHistoryPanel extends JPanel {
     }
 
     private void loadOrders() {
-        orderRepo.loadFromFile();       // Unit III – FileReader
+        orderRepo.loadFromDatabase();
         allOrders = orderRepo.getAll();
         applyFilter();
     }
@@ -139,7 +139,7 @@ public class OrderHistoryPanel extends JPanel {
         double totalRevenue = 0;
         for (Order o : filtered) {
             totalRevenue += o.getOrderTotal();
-            tableModel.addRow(new Object[]{o.getOrderId(), "Table " + o.getTableNumber(),
+            tableModel.addRow(new Object[]{o.getOrderId(), 
                     o.getCustomerName(), o.getStatus().getDisplayName(),
                     String.format("%.2f", o.getOrderTotal()), o.getOrderTime()});
         }
@@ -155,8 +155,8 @@ public class OrderHistoryPanel extends JPanel {
         Order found = allOrders.stream().filter(o -> o.getOrderId().equals(orderId)).findFirst().orElse(null);
         if (found == null) return;
         String items = found.getItemNames().isEmpty() ? "(none)" : String.join(", ", found.getItemNames());
-        String detail = String.format("Order: %s\nTable: %d\nCustomer: %s\nStatus: %s\nTotal: Rs. %.2f\nTime: %s\nItems: %s",
-                found.getOrderId(), found.getTableNumber(), found.getCustomerName(),
+        String detail = String.format("Order: %s\nCustomer: %s\nStatus: %s\nTotal: Rs. %.2f\nTime: %s\nItems: %s",
+                found.getOrderId(), found.getCustomerName(),
                 found.getStatus().getDisplayName(), found.getOrderTotal(), found.getOrderTime(), items);
         JTextArea ta = new JTextArea(detail);
         ta.setFont(new Font("Monospaced", Font.PLAIN, 13));

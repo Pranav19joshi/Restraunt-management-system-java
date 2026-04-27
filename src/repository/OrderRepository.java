@@ -5,118 +5,145 @@ import model.MenuItem;
 import model.Order;
 import model.FoodItem;
 
-import java.io.*;
+import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class OrderRepository {
-    private static final String FILE_PATH = "data/orders.csv";
     private final MenuRepository menuRepository;
     private Map<String, Order> orders = new HashMap<>();
 
     public OrderRepository(MenuRepository menuRepository) {
         this.menuRepository = menuRepository;
-        new File("data").mkdirs();
-        ensureHeaderExists();
-        loadFromFile();
+        loadFromDatabase();
     }
 
-    private void ensureHeaderExists() {
-        File file = new File(FILE_PATH);
-        if (!file.exists()) {
-            try (BufferedWriter w = new BufferedWriter(new FileWriter(file))) {
-                w.write("orderId,tableNumber,customerName,status,total,orderTime,items");
-                w.newLine();
-            } catch (IOException e) { System.err.println("Error creating orders file: " + e.getMessage()); }
+    public void save(Order order) { 
+        orders.put(order.getOrderId(), order); 
+        saveToDatabase(order); 
+    }
+
+    public Order findById(String orderId) { 
+        return orders.get(orderId); 
+    }
+    
+    public List<Order> getAll() { 
+        return new ArrayList<>(orders.values()); 
+    }
+
+    public int getMaxOrderCounter() {
+        int max = 0;
+        for (String id : orders.keySet()) {
+            try {
+                int val = Integer.parseInt(id.replace("ORD-", ""));
+                if (val > max) max = val;
+            } catch (Exception e) {}
         }
+        return max;
     }
-
-    public void save(Order order) { orders.put(order.getOrderId(), order); appendToCsv(order); }
-
-    private void appendToCsv(Order order) {
-        try (BufferedWriter w = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
-            w.write(order.toCsvString()); w.newLine();
-        } catch (IOException e) { System.err.println("Error appending order: " + e.getMessage()); }
-    }
-
-    public Order findById(String orderId) { return orders.get(orderId); }
-    public List<Order> getAll() { return new ArrayList<>(orders.values()); }
 
     public void updateStatus(String orderId, OrderStatus status) {
         Order order = orders.get(orderId);
-        if (order != null) { order.setStatus(status); updateStatusInFile(orderId, status); }
+        if (order != null) { 
+            order.setStatus(status); 
+            updateStatusInDatabase(orderId, status); 
+        }
     }
 
     public List<Order> getByStatus(OrderStatus status) {
         return orders.values().stream().filter(o -> o.getStatus() == status).collect(Collectors.toList());
     }
 
-    // Unit III – FileReader: load all past orders from CSV into memory
-    public void loadFromFile() {
-        File file = new File(FILE_PATH);
-        if (!file.exists()) return;
+    public void loadFromDatabase() {
         orders.clear();
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String line = br.readLine(); // skip header
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
-                String[] p = line.split(",", 7);
-                if (p.length < 6) continue;
-                String orderId = p[0].trim();
-                int tableNo    = Integer.parseInt(p[1].trim());
-                String custName = p[2].trim(), statusStr = p[3].trim();
-                String orderTime = p[5].trim();
-                String itemsStr  = p.length > 6 ? p[6].trim() : "";
-
+        String query = "SELECT * FROM orders";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+             
+            while (rs.next()) {
+                String orderId = rs.getString("orderId");
+                String custName = rs.getString("customerName");
+                String statusStr = rs.getString("status");
+                String orderTime = rs.getString("orderTime");
+                
+                // Get items
                 List<MenuItem> items = new ArrayList<>();
-                if (!itemsStr.isEmpty()) {
-                    for (String name : itemsStr.split("\\|")) {
-                        String trimmedName = name.trim();
-                        if (trimmedName.isEmpty()) continue;
-                        
-                        // Lookup the item in MenuRepository to get its real price
-                        MenuItem menuItem = menuRepository.getAll().stream()
-                            .filter(i -> i.getName().equalsIgnoreCase(trimmedName))
-                            .findFirst()
-                            .orElse(null);
-                        
-                        if (menuItem != null) {
-                            items.add(menuItem);
-                        } else {
-                            // Fallback if item not found in menu
-                            items.add(new FoodItem("?", trimmedName, "Unknown", 0.0));
+                try (PreparedStatement itemStmt = conn.prepareStatement("SELECT itemName FROM order_items WHERE orderId = ?")) {
+                    itemStmt.setString(1, orderId);
+                    try (ResultSet itemRs = itemStmt.executeQuery()) {
+                        while (itemRs.next()) {
+                            String itemName = itemRs.getString("itemName");
+                            MenuItem actualItem = menuRepository.getAll().stream()
+                                    .filter(m -> m.getName().equals(itemName))
+                                    .findFirst()
+                                    .orElse(new FoodItem("?", itemName, "Unknown", 0.0, false, 0));
+                            items.add(actualItem);
                         }
                     }
                 }
-
-                Order order = new Order(orderId, tableNo, custName, items);
+                
+                Order order = new Order(orderId, custName, items);
                 order.setOrderTime(orderTime);
-                try { order.setStatus(OrderStatus.valueOf(statusStr)); }
-                catch (IllegalArgumentException ex) { order.setStatus(OrderStatus.PENDING); }
+                try { 
+                    order.setStatus(OrderStatus.valueOf(statusStr)); 
+                } catch (IllegalArgumentException ex) { 
+                    order.setStatus(OrderStatus.PENDING); 
+                }
                 orders.put(orderId, order);
             }
-        } catch (IOException | NumberFormatException e) { System.err.println("Error loading orders: " + e.getMessage()); }
+        } catch (SQLException e) { 
+            System.err.println("Error loading orders from DB: " + e.getMessage()); 
+        }
     }
 
-    public void updateStatusInFile(String orderId, OrderStatus newStatus) {
-        File file = new File(FILE_PATH);
-        if (!file.exists()) return;
-        List<String> lines = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String header = br.readLine();
-            if (header != null) lines.add(header);
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
-                String[] p = line.split(",", 7);
-                if (p.length >= 4 && p[0].trim().equals(orderId)) {
-                    p[3] = newStatus.name(); lines.add(String.join(",", p));
-                } else lines.add(line);
+    private void saveToDatabase(Order order) {
+        String query = "INSERT INTO orders (orderId, customerName, status, total, orderTime) VALUES (?, ?, ?, ?, ?) " +
+                       "ON DUPLICATE KEY UPDATE status=?, total=?, orderTime=?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+             
+            pstmt.setString(1, order.getOrderId());
+            pstmt.setString(2, order.getCustomerName());
+            pstmt.setString(3, order.getStatus().name());
+            pstmt.setDouble(4, order.getOrderTotal());
+            pstmt.setString(5, order.getOrderTime());
+            
+            pstmt.setString(6, order.getStatus().name());
+            pstmt.setDouble(7, order.getOrderTotal());
+            pstmt.setString(8, order.getOrderTime());
+            
+            pstmt.executeUpdate();
+            
+            // Delete old items and insert new ones
+            try (PreparedStatement delStmt = conn.prepareStatement("DELETE FROM order_items WHERE orderId = ?")) {
+                delStmt.setString(1, order.getOrderId());
+                delStmt.executeUpdate();
             }
-        } catch (IOException e) { System.err.println("Error reading orders: " + e.getMessage()); return; }
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
-            for (String l : lines) { bw.write(l); bw.newLine(); }
-        } catch (IOException e) { System.err.println("Error writing orders: " + e.getMessage()); }
+            
+            String itemQuery = "INSERT INTO order_items (orderId, itemName) VALUES (?, ?)";
+            try (PreparedStatement itemStmt = conn.prepareStatement(itemQuery)) {
+                for (MenuItem item : order.getItems()) {
+                    itemStmt.setString(1, order.getOrderId());
+                    itemStmt.setString(2, item.getName());
+                    itemStmt.executeUpdate();
+                }
+            }
+            
+        } catch (SQLException e) { 
+            System.err.println("Error saving order to DB: " + e.getMessage()); 
+        }
+    }
+
+    public void updateStatusInDatabase(String orderId, OrderStatus newStatus) {
+        String query = "UPDATE orders SET status = ? WHERE orderId = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, newStatus.name());
+            pstmt.setString(2, orderId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) { 
+            System.err.println("Error updating order status in DB: " + e.getMessage()); 
+        }
     }
 }

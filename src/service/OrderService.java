@@ -17,14 +17,14 @@ public class OrderService {
     public OrderService(OrderRepository orderRepository) {
         this.orderRepository = orderRepository;
         this.queueManager = OrderQueueManager.getInstance();
+        this.orderCounter = orderRepository.getMaxOrderCounter();
     }
 
-    public Order placeOrder(int tableNumber, String customerName, List<MenuItem> items) throws OrderException {
-        if (tableNumber <= 0) throw new OrderException("Invalid table number: " + tableNumber);
+    public Order placeOrder(String customerName, List<MenuItem> items) throws OrderException {
         if (customerName == null || customerName.trim().isEmpty()) throw new OrderException("Customer name cannot be empty.");
         if (items == null || items.isEmpty()) throw new OrderException("Cannot place an order with no items.");
         String orderId = String.format("ORD-%04d", ++orderCounter);
-        Order order = new Order(orderId, tableNumber, customerName.trim(), items);
+        Order order = new Order(orderId, customerName.trim(), items);
         orderRepository.save(order);
         queueManager.enqueue(order);
         return order;

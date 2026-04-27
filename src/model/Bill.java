@@ -12,10 +12,10 @@ public class Bill implements Payable {
     public Bill(String billId, String orderId, double subtotal, double taxAmount) {
         this.billId = billId; this.orderId = orderId;
         this.subtotal = subtotal; this.taxAmount = taxAmount;
-        this.totalAmount = subtotal + taxAmount; this.discount = 0.0; this.paid = false;
+        this.totalAmount = Math.round((subtotal + taxAmount) * 100.0) / 100.0; this.discount = 0.0; this.paid = false;
     }
 
-    @Override public double getTotal() { return totalAmount - discount; }
+    @Override public double getTotal() { return Math.round((totalAmount - discount) * 100.0) / 100.0; }
     @Override public boolean isPaid() { return paid; }
     @Override public void markAsPaid() { this.paid = true; }
 

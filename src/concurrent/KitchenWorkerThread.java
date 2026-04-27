@@ -47,6 +47,6 @@ public class KitchenWorkerThread implements Runnable {
         kitchenService.setOrderStatus(order.getOrderId(), OrderStatus.READY);
 
         // Notify UI
-        notifiable.onOrderReady(order.getOrderId(), order.getTableNumber());
+        notifiable.onOrderReady(order.getOrderId());
     }
 }

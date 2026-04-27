@@ -18,7 +18,7 @@ import java.util.TimerTask;
 public class OrderPanel extends JPanel {
     private final OrderService orderService;
     private final MenuRepository menuRepository;
-    private JTextField tableField, customerField;
+    private JTextField customerField;
     private JTable menuSelectTable, cartTable, orderStatusTable;
     private DefaultTableModel menuSelectModel, cartModel, orderStatusModel;
     private JSpinner qtySpinner;
@@ -76,11 +76,10 @@ public class OrderPanel extends JPanel {
                         " New Order ", 0, 0, new Font("SansSerif", Font.BOLD, 12), ACCENT),
                 BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        // Table no + customer
-        JPanel top = new JPanel(new GridLayout(2, 2, 6, 4));
+        // Customer info
+        JPanel top = new JPanel(new GridLayout(1, 2, 6, 4));
         top.setBackground(CARD);
-        tableField = field(); customerField = field();
-        top.add(lbl("Table No:")); top.add(tableField);
+        customerField = field();
         top.add(lbl("Customer:")); top.add(customerField);
         p.add(top, BorderLayout.NORTH);
 
@@ -167,7 +166,7 @@ public class OrderPanel extends JPanel {
                         " Live Order Status ", 0, 0, new Font("SansSerif", Font.BOLD, 12), ACCENT),
                 BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        String[] cols = {"Order ID", "Table", "Customer", "Status", "Total", "Time"};
+        String[] cols = {"Order ID", "Customer", "Status", "Total", "Time"};
         orderStatusModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -240,10 +239,7 @@ public class OrderPanel extends JPanel {
 
     private void placeOrder() {
         try {
-            String tableStr = tableField.getText().trim();
             String customer = customerField.getText().trim();
-            if (tableStr.isEmpty()) { err("Enter table number."); return; }
-            int tableNo = Integer.parseInt(tableStr);
             if (cart.isEmpty()) { err("Add at least one item to the cart."); return; }
 
             // Build item list, duplicating items per quantity
@@ -252,14 +248,13 @@ public class OrderPanel extends JPanel {
                 for (int i = 0; i < entry.quantity; i++)
                     items.add(entry.item);
 
-            Order order = orderService.placeOrder(tableNo, customer, items);
+            Order order = orderService.placeOrder(customer, items);
             JOptionPane.showMessageDialog(this, "Order placed! ID: " + order.getOrderId()
                             + "\nItems: " + cart.size() + " unique, " + items.size() + " total",
                     "Order Placed", JOptionPane.INFORMATION_MESSAGE);
-            tableField.setText(""); customerField.setText("");
+            customerField.setText("");
             cart.clear(); refreshCart();
             refreshOrderStatus();
-        } catch (NumberFormatException ex) { err("Table must be a number.");
         } catch (OrderException ex) { err(ex.getMessage()); }
     }
 
@@ -292,7 +287,7 @@ public class OrderPanel extends JPanel {
             List<Order> orders = orderService.getAllOrders();
             orders.sort((a, b) -> b.getOrderId().compareTo(a.getOrderId()));
             for (Order o : orders)
-                orderStatusModel.addRow(new Object[]{o.getOrderId(), o.getTableNumber(),
+                orderStatusModel.addRow(new Object[]{o.getOrderId(), 
                         o.getCustomerName(), o.getStatus().toString(),
                         String.format("%.2f", o.getOrderTotal()), o.getOrderTime()});
         });

@@ -11,12 +11,11 @@ import java.util.stream.Collectors;
 
 public class Order implements Orderable {
     private String orderId, customerName, assignedWaiter, orderTime;
-    private int tableNumber;
     private OrderStatus status;
     private List<MenuItem> items;
 
-    public Order(String orderId, int tableNumber, String customerName, List<MenuItem> items) {
-        this.orderId = orderId; this.tableNumber = tableNumber;
+    public Order(String orderId, String customerName, List<MenuItem> items) {
+        this.orderId = orderId;
         this.customerName = customerName; this.items = new ArrayList<>(items);
         this.status = OrderStatus.PENDING; this.assignedWaiter = "";
         this.orderTime = new SimpleDateFormat("dd-MM-yyyy HH:mm").format(new Date());
@@ -25,13 +24,10 @@ public class Order implements Orderable {
     @Override public String getOrderId() { return orderId; }
     @Override public OrderStatus getStatus() { return status; }
     @Override public void setStatus(OrderStatus status) { this.status = status; }
-    @Override public double getOrderTotal() {
-        return Math.round(items.stream().mapToDouble(MenuItem::getTaxedPrice).sum() * 100.0) / 100.0;
-    }
+    @Override public double getOrderTotal() { return Math.round(items.stream().mapToDouble(MenuItem::getTaxedPrice).sum() * 100.0) / 100.0; }
     @Override public List<String> getItemNames() { return items.stream().map(MenuItem::getName).collect(Collectors.toList()); }
 
-    public int getTableNumber() { return tableNumber; }
-    public void setTableNumber(int t) { this.tableNumber = t; }
+
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String n) { this.customerName = n; }
     public String getAssignedWaiter() { return assignedWaiter; }
@@ -42,10 +38,10 @@ public class Order implements Orderable {
 
     public String toCsvString() {
         String itemNames = getItemNames().stream().collect(Collectors.joining("|"));
-        return String.format("%s,%d,%s,%s,%.2f,%s,%s",
-                orderId, tableNumber, customerName, status.name(), getOrderTotal(), orderTime, itemNames);
+        return String.format("%s,%s,%s,%.2f,%s,%s",
+                orderId, customerName, status.name(), getOrderTotal(), orderTime, itemNames);
     }
 
     @Override
-    public String toString() { return orderId + " | Table " + tableNumber + " | " + customerName + " | " + status; }
+    public String toString() { return orderId + " | " + customerName + " | " + status; }
 }
