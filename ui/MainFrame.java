@@ -47,7 +47,11 @@ public class MainFrame extends JFrame {
         JLabel titleLbl = new JLabel("Restaurant Management System");
         titleLbl.setFont(new Font("SansSerif", Font.BOLD, 20));
         titleLbl.setForeground(new Color(255, 200, 60));
+        JLabel subLbl = new JLabel("OOP Project | Semester 4 | Java + Swing");
+        subLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        subLbl.setForeground(new Color(140, 140, 160));
         header.add(titleLbl, BorderLayout.WEST);
+        header.add(subLbl, BorderLayout.EAST);
         add(header, BorderLayout.NORTH);
 
         // Tabs

@@ -1,14 +1,16 @@
 package enums;
 
-public enum TableStatus {
-    AVAILABLE("Available"),
-    OCCUPIED("Occupied"),
-    RESERVED("Reserved"),
-    CLEANING("Cleaning");
+public enum OrderStatus {
+    PENDING("Pending"),
+    RECEIVED("Received"),
+    PREPARING("Preparing"),
+    READY("Ready"),
+    SERVED("Served"),
+    CANCELLED("Cancelled");
 
     private final String displayName;
 
-    TableStatus(String displayName) {
+    OrderStatus(String displayName) {
         this.displayName = displayName;
     }
 

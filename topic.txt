@@ -1,0 +1,391 @@
+================================================================================
+         RESTAURANT MANAGEMENT SYSTEM — COMPLETE PROJECT DOCUMENTATION
+         Object Oriented Programming with Java  |  Semester 4
+================================================================================
+Total Lines of Code : 1,738  (across 34 files — 30 .java + 2 .bat + 2 .sql)
+Language            : Java (Swing GUI) + SQL (MySQL)
+Platform            : Windows (run.bat)
+Database            : MySQL 8.0 via JDBC (mysql-connector-j)
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 1 — PROJECT OVERVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Restaurant Management System is a desktop application built entirely in Java
+using the Swing GUI toolkit. It is structured around three functional modules:
+
+  1. Menu Management   — Add, remove, and toggle menu items.
+  2. Order Management  — Place, track, and cancel customer orders in real time.
+  3. Billing & Payment — Generate bills, apply discounts, and process payments.
+
+The project is designed to demonstrate core Object-Oriented Programming concepts
+taught in Semester 4, including inheritance, abstraction, interfaces,
+polymorphism, encapsulation, exception handling, multithreading, and JDBC.
+
+The application runs as a single compiled Java program. All data is persisted in
+a relational MySQL database using JDBC connectivity. This migration from CSV
+ensures better data integrity, scalability, and performance.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 2 — HOW TO RUN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Requirements:
+  - Java 8 or higher installed and available on the system PATH.
+  - MySQL Server 8.0+ installed and running.
+  - Windows OS (for run.bat).
+  - mysql-connector-j.jar inside the /lib folder.
+
+Method 1 — Double-click run.bat from Windows Explorer.
+
+Method 2 — Open CMD or PowerShell in the project folder and type:
+    .\run.bat
+
+What run.bat does step by step:
+  1. Creates the /out directory if it does not exist.
+  2. Compiles every .java file in src/ using the -cp flag to include the JDBC driver.
+  3. If compilation fails (exit code != 0), shows an error and stops.
+  4. If compilation succeeds, launches the application using:
+         java -cp "out;lib\mysql-connector-j.jar" Main
+
+Manual compile command (if needed):
+  javac -d out -cp "lib\mysql-connector-j.jar" -sourcepath src src\Main.java ...
+
+Manual run command:
+  java -cp "out;lib\mysql-connector-j.jar" Main
+
+The database must be initialized once using the 'database_setup.sql' script
+provided in the root directory before the first run.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 3 — FOLDER STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Main_project/
+├── run.bat                  ← Build and run script (Windows)
+├── topic.txt                ← This documentation file
+├── database_setup.sql       ← SQL initialization script for MySQL
+├── export_data.bat          ← One-click script to export DB to SQL file
+├── restaurant_data.sql      ← Snapshot of current database data
+├── lib/                     ← External dependencies
+│   └── mysql-connector-j.jar ← MySQL JDBC Driver
+├── out/                     ← Compiled .class files (auto-generated)
+└── src/
+    ├── Main.java            ← Entry point; launches Swing on the EDT
+    ├── enums/               ← OrderStatus, PaymentMethod
+    ├── interfaces/          ← Manageable, Orderable, Payable, Notifiable
+    ├── exception/           ← OrderException, PaymentException
+    ├── model/               ← Person, Customer, MenuItem, FoodItem, DrinkItem,
+    │                           Order, Bill
+    ├── repository/          ← MenuRepository, OrderRepository, DatabaseConnection
+    ├── service/             ← OrderService, KitchenService, BillingService
+    ├── concurrent/          ← OrderQueueManager, KitchenWorkerThread,
+    │                           NotificationThread
+    └── ui/                  ← MainFrame, MenuPanel, OrderPanel, BillingPanel, OrderHistoryPanel
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 4 — ENUMS  (package: enums)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── OrderStatus.java ──────────────────────────────────────────────────────────
+
+Represents the full lifecycle of an order from placement to completion.
+Each constant carries a human-readable displayName string.
+
+  PENDING    — Order placed but not yet acknowledged by the kitchen.
+  RECEIVED   — Kitchen has acknowledged and queued the order.
+  PREPARING  — Kitchen is actively cooking the order.
+  READY      — Food is fully prepared and ready to be served.
+  SERVED     — Order has been delivered to the customer.
+  CANCELLED  — Order was cancelled before being served.
+
+Fields  : String displayName
+Methods : getDisplayName(), toString()
+
+── PaymentMethod.java ────────────────────────────────────────────────────────
+
+Enumerates all accepted payment modes: CASH, CREDIT_CARD, DEBIT_CARD, UPI, WALLET.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 5 — INTERFACES  (package: interfaces)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Manageable<T> ─────────────────────────────────────────────────────────────
+
+Generic interface that enforces a standard CRUD contract on any entity type T.
+Implemented by MenuRepository.
+
+  void add(T item)          — Add a new entity.
+  void remove(String id)    — Remove an entity by its unique ID.
+  T    findById(String id)  — Retrieve a single entity by ID.
+  List<T> getAll()          — Return a copy of all entities.
+
+── Orderable ─────────────────────────────────────────────────────────────────
+
+Implemented by Order.java. Defines the contract for order objects.
+
+  String      getOrderId()            — Retrieve unique ID.
+  OrderStatus getStatus()             — Get current lifecycle status.
+  void        setStatus(OrderStatus)  — Update order status.
+  double      getOrderTotal()         — Calculate total (taxed).
+  List<String> getItemNames()         — Return list of item names.
+
+── Payable ───────────────────────────────────────────────────────────────────
+
+Implemented by Bill.java. Abstracts payment behaviour away from billing logic.
+
+  double  getTotal()     — Return final amount due.
+  boolean isPaid()       — Check payment status.
+  void    markAsPaid()   — Mark bill as paid.
+
+── Notifiable ────────────────────────────────────────────────────────────────
+
+Implemented by NotificationThread. Callback contract for kitchen alerts.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 6 — EXCEPTION CLASSES  (package: exception)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── OrderException — Checked (extends Exception) ──────────────────────────────
+
+Thrown by OrderService when an order-related operation fails (invalid table,
+empty cart, or illegal cancellation).
+
+── PaymentException — Checked (extends Exception) ────────────────────────────
+
+Thrown by BillingService for insufficient funds, invalid discounts, or
+accessing paid bills.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 7 — MODEL CLASSES  (package: model)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Person.java (Abstract) & Customer.java (Extends Person)
+Root of the people hierarchy. Uses private fields and role implementation.
+
+── MenuItem.java (Abstract), FoodItem (5% Tax), DrinkItem (12% Tax)
+Polymorphic hierarchy for menu items. Subclasses define specific tax rates
+via getTaxedPrice().
+
+── Order.java — implements Orderable
+Central domain object. Sums taxed prices using Stream API.
+
+── Bill.java — implements Payable
+Stores financial details, applies discounts, and generates receipt text.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 8 — REPOSITORY CLASSES  (package: repository)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── DatabaseConnection.java ────────────────────────────────────────────────────
+
+Utility class that provides active JDBC connections to the MySQL database.
+Handles the driver loading (com.mysql.cj.jdbc.Driver) and stores the 
+connection URL with necessary flags (useSSL=false, allowPublicKeyRetrieval=true).
+
+── MenuRepository.java — implements Manageable<MenuItem> ─────────────────────
+
+Manages the restaurant menu by communicating with the 'menu_items' table.
+
+loadFromDatabase()
+  — Executes "SELECT * FROM menu_items".
+  — Iterates through the ResultSet, identifying item types (Food/Drink).
+  — Instantiates FoodItem or DrinkItem objects based on the 'itemType' column.
+  — populates the in-memory list for immediate UI access.
+
+saveToDatabase(MenuItem)
+  — Uses a PreparedStatement with an "ON DUPLICATE KEY UPDATE" clause.
+  — This ensures that adding a new item or updating an existing one is handled
+    in a single atomic SQL operation.
+  — Handles polymorphic fields (Vegetarian/Alcoholic) by casting at runtime.
+
+removeFromDatabase(String id)
+  — Executes "DELETE FROM menu_items WHERE itemId = ?".
+
+── OrderRepository.java ──────────────────────────────────────────────────────
+
+Manages persistent order storage across two normalized tables: 'orders' and 'order_items'.
+
+loadFromDatabase()
+  — Clears memory and fetches all header data from the 'orders' table.
+  — For each order, it performs a secondary query on 'order_items' to reconstruct
+     the list of items ordered.
+  — Rebuilds the Order objects and stores them in the HashMap.
+
+saveToDatabase(Order)
+  — Inserts/Updates the order header (ID, Customer, Status, Total, Time).
+  — Synchronizes the 'order_items' table by deleting old entries and inserting
+    the current cart items to maintain data consistency.
+
+updateStatusInDatabase(String id, OrderStatus status)
+  — Executes a targeted UPDATE query to change the status column for a specific ID.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 9 — SERVICE CLASSES  (package: service)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OrderService: Handles order placement validation and counter management.
+KitchenService: Manages synchronized order status transitions.
+BillingService: Generates Bill objects and calculates pre-tax/post-tax totals.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 10 — CONCURRENCY  (package: concurrent)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OrderQueueManager (Singleton): Thread-safe LinkedBlockingQueue for orders.
+KitchenWorkerThread: Daemon thread that dequeues and "cooks" orders.
+NotificationThread: Relays kitchen alerts via a second decoupled queue.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 11 — UI CLASSES  (package: ui)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MainFrame hosts four specialized panels:
+  - MenuPanel: Management of the digital menu.
+  - OrderPanel: Live cart-based order placement and status tracking.
+  - BillingPanel: Professional billing and receipt generation.
+  - OrderHistoryPanel: Searching and filtering historical records from DB.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 12 — OOP CONCEPTS DEMONSTRATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Concept              Where Used / How Demonstrated
+──────────────────── ────────────────────────────────────────────────────────
+Inheritance          Customer extends Person; FoodItem / DrinkItem extend MenuItem.
+Abstraction          Person and MenuItem are abstract; force subclass logic.
+Interface            Manageable, Orderable, Payable, Notifiable used for contracts.
+Polymorphism         MenuItem list handles multiple types; getTaxedPrice() dynamic dispatch.
+Encapsulation        All model fields are private; accessed via getters/setters.
+Exception Handling   Checked exceptions (Order/Payment) enforce business rules.
+Multithreading       Background worker threads process logic without freezing UI.
+JDBC Connectivity    Repositories use SQL/JDBC instead of flat-file File I/O.
+Generics             Manageable<T> provides type safety for repository operations.
+Lambdas / Streams    Used for filtering lists and calculating monetary sums.
+Singleton Pattern    OrderQueueManager ensures one shared queue for the system.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 13 — TAX AND ID REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Item Type   Tax Rate   Formula                Example (Rs. 100 base)
+  ─────────── ────────── ──────────────────────  ──────────────────────
+  Food        5% GST     basePrice × 1.05        Rs. 105.00
+  Drink       12% GST    basePrice × 1.12        Rs. 112.00
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 14 — CLASS HIERARCHY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Object
+├── Person (Abstract) -> Customer
+├── MenuItem (Abstract) -> FoodItem, DrinkItem
+├── Order, Bill
+├── OrderQueueManager (Singleton)
+├── DatabaseConnection (JDBC Utility)
+├── KitchenWorkerThread, NotificationThread (Runnable)
+└── Repositories & Services
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 15 — ORDER PROCESSING WORKFLOW (END-TO-END)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. User / OrderPanel: Places order; saved to MySQL 'orders' table.
+2. KitchenWorker: Dequeues order; status updates to RECEIVED -> PREPARING -> READY.
+3. Notification: Green banner appears when order transitions to READY.
+4. User / OrderPanel: Marks order as SERVED (Database UPDATE).
+5. User / BillingPanel: Generates bill; processes payment; Receipt marked PAID.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 16 — DATABASE SCHEMA (MySQL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Table: menu_items ─────────────────────────────────────────────────────────
+
+Stores all available food and drink items.
+- itemId (VARCHAR, PK)   — Unique ID (F001, D001).
+- name (VARCHAR)         — Display name.
+- basePrice (DOUBLE)     — Pre-tax price.
+- category (VARCHAR)     — Category (Main Course, etc.).
+- itemType (VARCHAR)     — "Food" or "Drink".
+- extra1 (VARCHAR)       — Boolean flag for Vegetarian or Alcoholic.
+- extra2 (VARCHAR)       — Prep time (Food) or Volume (Drink).
+
+── Table: orders ─────────────────────────────────────────────────────────────
+
+Stores the header information for every customer order.
+- orderId (VARCHAR, PK)  — Unique order ID (ORD-0001).
+- customerName (VARCHAR) — Name of the customer.
+- status (VARCHAR)       — OrderStatus enum name (PENDING, READY, etc.).
+- total (DOUBLE)         — The final taxed total of the order.
+- orderTime (VARCHAR)    — Timestamp of placement.
+
+── Table: order_items ────────────────────────────────────────────────────────
+
+A separate table to handle the one-to-many relationship of items per order.
+- id (INT, PK)           — Auto-incrementing identifier.
+- orderId (VARCHAR, FK)  — Links to the orders table.
+- itemName (VARCHAR)     — Name of the item ordered.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 17 — LINE COUNT BREAKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File                     Lines   Package
+──────────────────────── ─────── ──────────────
+OrderPanel.java            271   ui
+BillingPanel.java          166   ui
+OrderHistoryPanel.java     146   ui
+MenuPanel.java             128   ui
+MainFrame.java              79   ui
+MenuRepository.java        121   repository
+OrderRepository.java       120   repository
+DatabaseConnection.java     19   repository
+BillingService.java         48   service
+KitchenService.java         41   service
+OrderService.java           42   service
+Bill.java                   47   model
+Order.java                  38   model
+MenuItem.java               30   model
+Person.java                 26   model
+FoodItem.java               19   model
+DrinkItem.java              15   model
+Customer.java               14   model
+KitchenWorkerThread.java    43   concurrent
+NotificationThread.java     52   concurrent
+OrderQueueManager.java      30   concurrent
+OrderStatus.java            20   enums
+PaymentMethod.java          19   enums
+OrderException.java         17   exception
+PaymentException.java       17   exception
+database_setup.sql          24   (root)
+export_data.bat              5   (root)
+restaurant_data.sql         93   (root)
+run.bat                     12   (root)
+Main.java                    7   (root)
+Interfaces (4 files)        29   interfaces
+──────────────────────── ─────── ──────────────
+TOTAL                    1,738   (34 files)
+
+
+================================================================================
+End of Documentation — Restaurant Management System
+================================================================================
